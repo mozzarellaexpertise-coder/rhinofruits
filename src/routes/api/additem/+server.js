@@ -1,35 +1,24 @@
-import { Pool } from 'pg';
+import { json } from '@sveltejs/kit';
+import pkg from 'pg';
+const { Pool } = pkg;
+
+const pool = new Pool({
+  connectionString: process.env.NEON_DATABASE_URL
+});
 
 export async function POST({ request }) {
   const { name, photo_url } = await request.json();
 
-  if (!name || !photo_url) {
-    return new Response(JSON.stringify({ error: "Name and photo_url required" }), { status: 400 });
-  }
-
-  const pool = new Pool({
-    connectionString: process.env.NEON_DATABASE_URL
-  });
-
-  const client = await pool.connect().catch(err => {
-    console.error("DB connection failed:", err);
-    return null;
-  });
-
-  if (!client) {
-    return new Response(JSON.stringify({ error: "Cannot connect to DB" }), { status: 500 });
-  }
+  if (!name || !photo_url) return json({ error: 'Missing data' }, { status: 400 });
 
   try {
-    await client.query(
-      'INSERT INTO fruits(name, photo_url) VALUES($1, $2)',
+    const res = await pool.query(
+      'INSERT INTO fruits (name, photo_url) VALUES ($1, $2) RETURNING *',
       [name, photo_url]
     );
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
+    return json(res.rows[0]);
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
-  } finally {
-    client.release();
-    await pool.end();
+    console.error(err);
+    return json({ error: err.message }, { status: 500 });
   }
 }

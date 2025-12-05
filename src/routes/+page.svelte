@@ -1,11 +1,15 @@
 <script>
-  import { supabase } from '$lib/supabaseClient';
   import { onMount } from 'svelte';
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabase = createClient(
+    import.meta.env.VITE_SUPABASE_URL,
+    import.meta.env.VITE_SUPABASE_ANON_KEY
+  );
 
   let fruits = [];
-  let name = '';
-  let file = null;
-  let fileInput;
+  let newFruitName = '';
+  let file;
 
   async function fetchFruits() {
     const res = await fetch('/api/items');
@@ -13,65 +17,44 @@
   }
 
   async function addFruit() {
-    if (!name || !file) return alert("Enter name and choose an image!");
+    if (!newFruitName || !file) return alert('Name + photo required');
 
-    // Upload image to Supabase Storage
-    const { data, error: uploadError } = await supabase
-      .storage
+    // 1️⃣ Upload photo to Supabase Storage
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const { data, error: uploadError } = await supabase.storage
       .from('fruits')
-      .upload(`public/${file.name}`, file);
+      .upload(fileName, file);
 
-    if (uploadError) {
-      return alert("Upload failed: " + uploadError.message);
-    }
+    if (uploadError) return alert('Upload failed: ' + uploadError.message);
 
-    // Get public URL
-    const { publicUrl, error: urlError } = supabase
-      .storage
-      .from('fruits')
-      .getPublicUrl(`public/${file.name}`);
+    const photo_url = supabase.storage.from('fruits').getPublicUrl(fileName).data.publicUrl;
 
-    if (urlError) return alert("Cannot get URL: " + urlError.message);
-
-    // Send to Neon via API
+    // 2️⃣ Send name + photo_url to Neon API
     const res = await fetch('/api/additem', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, photo_url: publicUrl })
+      body: JSON.stringify({ name: newFruitName, photo_url })
     });
 
     if (res.ok) {
-      name = '';
+      newFruitName = '';
       file = null;
-      fileInput.value = '';
-      await fetchFruits();
+      fetchFruits();
     } else {
-      alert("Failed to add fruit");
+      alert('Failed to add fruit');
     }
   }
 
   onMount(fetchFruits);
 </script>
 
-<h2>Add New Fruit</h2>
-<input type="text" bind:value={name} placeholder="Fruit Name" />
-<input type="file" bind:this={fileInput} on:change={e => file = e.target.files[0]} />
+<input type="text" placeholder="Fruit name" bind:value={newFruitName} />
+<input type="file" bind:files={file} />
 <button on:click={addFruit}>Add Fruit</button>
 
-<h2>Fruit List</h2>
 <ul>
-  {#each fruits as fruit}
-    <li>
-      {fruit.name} 
-      {#if fruit.photo_url}
-        <img src={fruit.photo_url} alt={fruit.name} width="50"/>
-      {/if}
-    </li>
+  {#each fruits as f}
+    <li>{f.name} {f.photo_url ? <img src={f.photo_url} width="50"/> : ''}</li>
   {/each}
 </ul>
-<style>
-  img {
-    margin-left: 10px;
-    vertical-align: middle;
-  }
-</style>
