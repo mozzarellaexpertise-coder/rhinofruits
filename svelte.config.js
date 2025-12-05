@@ -1,9 +1,11 @@
-import adapter from '@sveltejs/adapter-netlify';
+import adapter from '@sveltejs/adapter-vercel';
 import preprocess from 'svelte-preprocess';
 
 export default {
   preprocess: preprocess(),
   kit: {
     adapter: adapter(),
+    // Optional: override default build dir
+    // paths: { base: '' }
   }
 };
