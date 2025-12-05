@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { createClient } from '@supabase/supabase-js';
 
+  // Supabase client
   const supabase = createClient(
     import.meta.env.VITE_SUPABASE_URL,
     import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -11,15 +12,17 @@
   let newFruitName = '';
   let file;
 
+  // Fetch fruits from Neon via API
   async function fetchFruits() {
     const res = await fetch('/api/items');
     fruits = await res.json();
   }
 
+  // Add fruit with photo
   async function addFruit() {
     if (!newFruitName || !file) return alert('Name + photo required');
 
-    // 1️⃣ Upload photo to Supabase Storage
+    // Upload file to Supabase
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
     const { data, error: uploadError } = await supabase.storage
@@ -28,13 +31,13 @@
 
     if (uploadError) return alert('Upload failed: ' + uploadError.message);
 
-    const photo_url = supabase.storage.from('fruits').getPublicUrl(fileName).data.publicUrl;
+    const { publicUrl } = supabase.storage.from('fruits').getPublicUrl(fileName).data;
 
-    // 2️⃣ Send name + photo_url to Neon API
+    // Send name + photo URL to Neon API
     const res = await fetch('/api/additem', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newFruitName, photo_url })
+      body: JSON.stringify({ name: newFruitName, photo_url: publicUrl })
     });
 
     if (res.ok) {
@@ -49,12 +52,19 @@
   onMount(fetchFruits);
 </script>
 
+<h2>Boss Fruits 🍌🍎🥭</h2>
+
 <input type="text" placeholder="Fruit name" bind:value={newFruitName} />
 <input type="file" bind:files={file} />
-<button on:click={addFruit}>Add Fruit</button>
+<button on:click={addFruit}>Add</button>
 
 <ul>
   {#each fruits as f}
-    <li>{f.name} {f.photo_url ? <img src={f.photo_url} width="50"/> : ''}</li>
+    <li>
+      {f.name}
+      {#if f.photo_url}
+        <img src={f.photo_url} width="50" alt={f.name} />
+      {/if}
+    </li>
   {/each}
 </ul>
