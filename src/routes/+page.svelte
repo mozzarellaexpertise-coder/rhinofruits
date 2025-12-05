@@ -4,11 +4,12 @@
  // 👇 FIXED: We use the SvelteKit $env module for public variables
  import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 
- // Supabase client
- const supabase = createClient(
-  PUBLIC_SUPABASE_URL, // This now loads correctly from the build bundle
-  PUBLIC_SUPABASE_ANON_KEY // This too!
- );
+ // Supabase clien
+
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+);
 
  let fruits = [];
  let newFruitName = '';
