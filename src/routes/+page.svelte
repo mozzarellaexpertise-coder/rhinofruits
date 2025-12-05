@@ -4,15 +4,21 @@
 
   // Supabase client
   const supabase = createClient(
-    import.meta.env.SUPABASE_URL,
-    import.meta.env.SUPABASE_ANON_KEY
+    import.meta.env.VITE_SUPABASE_URL,
+    import.meta.env.VITE_SUPABASE_ANON_KEY
   );
 
   let fruits = [];
   let newFruitName = '';
-  let file;
+  let files; // bind to input
+  let file;  // single file extracted
 
-  // Fetch fruits from Neon via API
+  // Extract first file from FileList
+  function prepareFile() {
+    file = files ? files[0] : null;
+  }
+
+  // Fetch fruits from Neon API
   async function fetchFruits() {
     const res = await fetch('/api/items');
     fruits = await res.json();
@@ -20,6 +26,7 @@
 
   // Add fruit with photo
   async function addFruit() {
+    prepareFile();
     if (!newFruitName || !file) return alert('Name + photo required');
 
     // Upload file to Supabase
@@ -42,6 +49,7 @@
 
     if (res.ok) {
       newFruitName = '';
+      files = null;
       file = null;
       fetchFruits();
     } else {
@@ -55,7 +63,7 @@
 <h2>Boss Fruits 🍌🍎🥭</h2>
 
 <input type="text" placeholder="Fruit name" bind:value={newFruitName} />
-<input type="file" bind:files={file} />
+<input type="file" bind:files={files} />
 <button on:click={addFruit}>Add</button>
 
 <ul>
